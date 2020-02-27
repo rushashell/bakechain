@@ -3,7 +3,7 @@ app
   $scope.setting = Storage.settings;
   if (!$scope.setting) {
     $scope.setting = {
-      rpc : "https://rpc.tezrpc.me",
+      rpc : "https://teznode.letzbake.com",
     };
     Storage.setSetting($scope.setting);
   }
@@ -131,7 +131,8 @@ app
   $scope.cycleLength = window.CONSTANTS.cycle_length;
   $scope.pkh = keys.pkh;
   $scope.pkhex = eztz.utility.b58cdecode(keys.pkh, eztz.prefix.tz1);
-  $scope.explorerUrl = window.EXPLORER_URL;
+  $scope.explorerAccountInfoUrl = replace("{{PKH}}", keys.pkh, window.EXPLORER_ACCOUNTINFO_URL);
+  $scope.explorerBlockInfoUrl = window.EXPLORER_ACCOUNTINFO_URL;
   $scope.status = 0;
   var authorisedDelegate = false;
   var stakingBalanceEnough = false;
@@ -252,7 +253,7 @@ app
       $scope.baker.frozen = parseInt(r.frozen_balance) - (parseInt(r.balance) + parseInt(r.delegated_balance) - parseInt(r.staking_balance));
       $scope.baker.staking = parseInt(r.staking_balance);
       $scope.baker.stakers = parseInt(r.delegated_contracts.length);
-      if ($scope.baker.staking < 10000000000) {
+      if ($scope.baker.staking < window.CONSTANTS.baker_min_staking_balance) {
         stakingBalanceEnough = false;
       } else {
         stakingBalanceEnough = true;
@@ -270,8 +271,8 @@ app
         $scope.status = 0;
       }
       
-      $scope.baker.rolls = Math.floor($scope.baker.staking/10000000000);
-      $scope.baker.excess = $scope.baker.staking-($scope.baker.rolls*10000000000);
+      $scope.baker.rolls = Math.floor($scope.baker.staking/window.CONSTANTS.baker_min_staking_balance);
+      $scope.baker.excess = $scope.baker.staking-($scope.baker.rolls*window.CONSTANTS.baker_min_staking_balance);
       if (r.frozen_balance_by_cycle.length > 0){
         $scope.baker.nextReward = r.frozen_balance_by_cycle[0].rewards;
         $scope.baker.nextLevel = ((r.frozen_balance_by_cycle[0].cycle + 6)*window.CONSTANTS.cycle_length);          
@@ -302,15 +303,15 @@ app
       });
     });
     
-    eztz.rpc.call('/chains/main/blocks/head/helpers/baking_rights?delegate='+pkh).then(function(r){
+    eztz.rpc.call('/chains/main/blocks/head/helpers/baking_rights?delegate='+pkh+"&cycle="+$scope.baker.cycle).then(function(r){
       $scope.$apply(function(){
         if (r.length)
-          $scope.baker.nextBake = r[0].level + "/" +r[0].priority;
+          $scope.baker.nextBake = r[0].level + "/" + r[0].priority;
         else
           $scope.baker.nextBake = "N/A";
       });
     });
-    eztz.rpc.call('/chains/main/blocks/head/helpers/endorsing_rights?delegate='+pkh).then(function(r){
+    eztz.rpc.call('/chains/main/blocks/head/helpers/endorsing_rights?delegate='+pkh+"&cycle="+$scope.baker.cycle).then(function(r){
       $scope.$apply(function(){
         if (r.length)
           $scope.baker.nextEndorse = r[0].level;
@@ -319,23 +320,24 @@ app
       });
     });
     
-    $http.get(window.API_URL+"/total_bakings/"+pkh).then(function(r){
-        if (r.status == 200 && r.data.length){
-          $scope.baker.bakes = r.data[0].count.count_all;
-          $scope.baker.misses = r.data[0].count.count_miss;
-          $scope.baker.steals = r.data[0].count.count_steal;
+    $http.get("https://api.tzstats.com/explorer/account/"+pkh).then(function(r){
+        if (r.status == 200){
+          $scope.baker.bakes = r.data.blocks_baked;
+          $scope.baker.endorsements = r.data.blocks_endorsed;
+          $scope.baker.misses = r.data.blocks_missed;
+          $scope.baker.steals = r.data.blocks_stolen;
         }
     });
+
+
+    // List of current bakes 
+    /*
     $http.get(window.API_URL+"/bakings/"+pkh).then(function(r){
         if (r.status == 200 && r.data.length){
           $scope.baker.current = r.data;
         }
     });
-    $http.get(window.API_URL+"/total_endorsements/"+pkh).then(function(r){
-        if (r.status == 200 && r.data.length){
-          $scope.baker.endorsements = r.data[0].slots.count_all;
-        }
-    });
+
     $http.get(window.API_URL+"/bakings_endorsement/"+pkh).then(function(r){
         if (r.status == 200 && r.data.length){
           $scope.baker.currentEds = r.data;
@@ -346,6 +348,8 @@ app
           $scope.baker.payouts = r.data.slice(5);
         }
     });
+    */
+
     window.hideLoader();
   };
   $scope.showPer = function(a,b){

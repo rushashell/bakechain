@@ -138,7 +138,7 @@ app.service('Lang', ["$sce", function($sce) {
         "disclaimer" : "Disclaimer",
         "terms" : "Terms",
         "privacy" : "Privacy",
-        "view_on_tzscan" : "View on TzScan",
+        "view_on_block_explorer" : "View on block explorer",
         "account_notadded" : "This account has not been added to the blockchain yet - please wait for a baker to include this in a block before you can use this account. This error may also show if your device can't connect to the Tezos Network.",
         "transactions" : "Transactions",
         "send" : "Send",
