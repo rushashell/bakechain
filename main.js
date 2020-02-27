@@ -20,9 +20,10 @@ function createWindow () {
     useContentSize: true, 
     icon : path.join(__dirname, 'assets/desktop-icon.png'),
     webPreferences: {
-      devTools: true
+      devTools: true,
+      nodeIntegration: true
     }
-  })
+  });
   mainWindow.webContents.on('new-window', function(event, url){
     event.preventDefault();
     shell.openExternal(url);
@@ -46,7 +47,7 @@ function createWindow () {
     pathname: path.join(__dirname, 'app/index.html'),
     protocol: 'file:',
     slashes: true
-  }))
+  }));
   mainWindow.webContents.on('did-finish-load', function(){
     splash.destroy();
     mainWindow.show();

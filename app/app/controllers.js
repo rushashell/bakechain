@@ -131,7 +131,7 @@ app
   $scope.cycleLength = window.CONSTANTS.cycle_length;
   $scope.pkh = keys.pkh;
   $scope.pkhex = eztz.utility.b58cdecode(keys.pkh, eztz.prefix.tz1);
-  $scope.explorerAccountInfoUrl = replace("{{PKH}}", keys.pkh, window.EXPLORER_ACCOUNTINFO_URL);
+  $scope.explorerAccountInfoUrl = window.EXPLORER_ACCOUNTINFO_URL.replace("{{PKH}}", keys.pkh);
   $scope.explorerBlockInfoUrl = window.EXPLORER_ACCOUNTINFO_URL;
   $scope.status = 0;
   var authorisedDelegate = false;
