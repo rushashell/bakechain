@@ -1,11 +1,11 @@
-const electron = require('electron')
-const {ipcMain} = require('electron')
-const app = electron.app
-const BrowserWindow = electron.BrowserWindow
-const path = require('path')
-const url = require('url')
+const electron = require('electron');
+const { ipcMain } = require('electron');
+const app = electron.app;
+const BrowserWindow = electron.BrowserWindow;
+const path = require('path');
+const url = require('url');
 const shell = require('electron').shell;
-const Menu = require('electron').Menu
+const Menu = require('electron').Menu;
 
 let mainWindow
 function createWindow () {
@@ -24,6 +24,10 @@ function createWindow () {
       nodeIntegration: true
     }
   });
+
+  // Enable DEV tools for debugging.
+  //mainWindow.webContents.openDevTools();
+
   mainWindow.webContents.on('new-window', function(event, url){
     event.preventDefault();
     shell.openExternal(url);
@@ -48,15 +52,18 @@ function createWindow () {
     protocol: 'file:',
     slashes: true
   }));
+
   mainWindow.webContents.on('did-finish-load', function(){
     splash.destroy();
     mainWindow.show();
     mainWindow.focus();
   });
+
   mainWindow.on('closed', function () {
     mainWindow = null
-  })
+  });
 }
+
 function createMenu() {
   const application = {
     label: "BakeChain",
@@ -65,11 +72,11 @@ function createMenu() {
         label: "Quit",
         accelerator: "CmdOrCtrl+Q",
         click: () => {
-          app.quit()
+          app.quit();
         }
       }
     ]
-  }
+  };
 
   const edit = {
     label: "Edit",
@@ -85,26 +92,29 @@ function createMenu() {
         selector: "paste:"
       }
     ]
-  }
+  };
 
   const template = [
     application,
     edit
-  ]
+  ];
 
-  Menu.setApplicationMenu(Menu.buildFromTemplate(template))
+  Menu.setApplicationMenu(Menu.buildFromTemplate(template));
 }
+
 app.on('ready',function(){
   createWindow();
   createMenu();
 });
+
 app.on('window-all-closed', function () {
   if (process.platform !== 'darwin') {
-    app.quit()
+    app.quit();
   }
-})
+});
+
 app.on('activate', function () {
   if (mainWindow === null) {
-    createWindow()
+    createWindow();
   }
-})
+});

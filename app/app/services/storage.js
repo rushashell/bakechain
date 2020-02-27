@@ -10,24 +10,27 @@ app.service('Storage', function() {
   r.password = '';
   r.restored = false;
   r.ico = false;
-  
-  r.load = function(){
-    if (!r.loaded){
+
+  r.load = function() {
+    if (!r.loaded) {
       r.loadSetting();
       r.loadStore();
       r.loaded = true;
     }
-  }
+  };
+
   r.loadStore = function(){
     r.data = window.store.get('bkstore', false);
     return r.data;
   };
+
   r.setStore = function(v, k, p){
     r.data = v;
-    if (typeof k != 'undefined') r.keys = k;
-    if (typeof p != 'undefined') r.password = p;
+    if (typeof k !== 'undefined') r.keys = k;
+    if (typeof p !== 'undefined') r.password = p;
     window.store.set('bkstore', v);
   };
+
   r.clearStore = function(){
     r.keys = {};
     r.password = '';
@@ -38,14 +41,17 @@ app.service('Storage', function() {
     window.store.clear();
     r.setSetting(s);
   };
+
   r.setSetting = function(v){
     r.settings = v;
     window.store.set('tbsetting', v);
   };
+
   r.loadSetting = function(){
     r.settings = window.store.get('tbsetting', false);
     return r.settings;
   };
+
   r.load();
   return r;
 });

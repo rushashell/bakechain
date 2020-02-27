@@ -3,60 +3,67 @@ app
   $scope.setting = Storage.settings;
   if (!$scope.setting) {
     $scope.setting = {
-      rpc : "https://teznode.letzbake.com",
+      rpc : window.NODE_URL
     };
     Storage.setSetting($scope.setting);
   }
+
   window.eztz.node.setProvider($scope.setting.rpc);
-  $scope.testHash = function(){
+
+  $scope.testHash = function() {
     SweetAlert.swal({
-      title: "Test your device",
-      text: "Before using BakeChain, we recommend that you run a quick test to see if your hardware is good enough to bake with. This will help reduce misses and increase your bake rate - this test can take a few seconds to run and may force your CPU to run a little harder",
-      type : "warning",
-      showCancelButton: true,
-      confirmButtonText: "Yes, run it!",
-      closeOnConfirm: true
-    },
-    function(isConfirm){
-      if (isConfirm){
-        window.showLoader();
-        window.BCBaker.test().then(function(r){
-          var rates = [
-            ["This is not enough to run BakeChain efficiently.", "error"],
-            ["This is a relatively low hash rate, and you are at risk of missing blocks.", "warning"],
-            ["This is an OK hash rate, but you may still miss some blocks.", "warning"],
-            ["This is a Good hash rate with minimal block misses.", "success"],
-            ["This is an Excellent hash rate with minimal block misses.", "success"],
-          ];
-          var rr = 0;
-          if (r < 10) rr = 0;
-          else if (r < 30) rr = 1;
-          else if (r < 50) rr = 2;
-          else if (r < 65) rr = 3;
-          else rr = 4;
-          SweetAlert.swal({
-            title: "Your results",
-            text: "Your hardware is computing at a hash rate of " + r.toFixed(3) + "Kh/s. " + rates[rr][0],
-            type : rates[rr][1],
-          })
-          window.hideLoader();
-        });
-      }
-    });
-  }
-  if (Storage.loaded && typeof Storage.keys.sk != 'undefined'){
+        title: "Test your device",
+        text:
+          "Before using BakeChain, we recommend that you run a quick test to see if your hardware is good enough to bake with. This will help reduce misses and increase your bake rate - this test can take a few seconds to run and may force your CPU to run a little harder",
+        type: "warning",
+        showCancelButton: true,
+        confirmButtonText: "Yes, run it!",
+        closeOnConfirm: true
+      },
+      function(isConfirm) {
+        if (isConfirm) {
+          window.showLoader();
+          window.BCBaker.test().then(function(r) {
+            const rates = [
+              ["This is not enough to run BakeChain efficiently.", "error"],
+              ["This is a relatively low hash rate, and you are at risk of missing blocks.", "warning"],
+              ["This is an OK hash rate, but you may still miss some blocks.", "warning"],
+              ["This is a Good hash rate with minimal block misses.", "success"],
+              ["This is an Excellent hash rate with minimal block misses.", "success"]
+            ];
+            var rr = 0;
+            if (r < 10) rr = 0;
+            else if (r < 30) rr = 1;
+            else if (r < 50) rr = 2;
+            else if (r < 65) rr = 3;
+            else rr = 4;
+            SweetAlert.swal({
+              title: "Your results",
+              text: "Your hardware is computing at a hash rate of " + r.toFixed(3) + "Kh/s. " + rates[rr][0],
+              type: rates[rr][1],
+            });
+            window.hideLoader();
+          });
+        }
+      });
+  };
+
+  if (Storage.loaded && typeof Storage.keys.sk !== 'undefined'){
     return $location.path('/main');
-  } else if (Storage.loaded && typeof Storage.data.ensk != 'undefined'){
+  } else if (Storage.loaded && typeof Storage.data.ensk !== 'undefined'){
     return $location.path('/unlock');
   } else {
     $scope.testHash();
   }
+
   $scope.restore = function(){
     return $location.path('/restore');
   };
+
   $scope.link = function(){
     return $location.path('/link');
   };
+
   $scope.create = function(){
     return $location.path('/create');
   };
@@ -68,16 +75,19 @@ app
   $scope.cancel = function(){
     return $location.path('/new');
   };
-  $scope.newMnemonic = function(){
+
+  $scope.newMnemonic = function() {
     $scope.mnemonic = window.eztz.crypto.generateMnemonic();
-  }
-  $scope.showSeed = function(m){
+  };
+
+  $scope.showSeed = function(m) {
     var mm = m.split(" ");
-    return $sce.trustAsHtml("<span>"+mm.join("</span><span>")+"</span>");
-  }
+    return $sce.trustAsHtml("<span>" + mm.join("</span><span>") + "</span>");
+  };
+
   $scope.create = function(){
-    var keys = window.eztz.crypto.generateKeys($scope.mnemonic, $scope.passphrase);
-    var keys = {sk : keys.sk, pk : keys.pk, pkh : keys.pkh, type : "encrypted"};
+    var generatedKeys = window.eztz.crypto.generateKeys($scope.mnemonic, $scope.passphrase);
+    var keys = { sk: generatedKeys.sk, pk: generatedKeys.pk, pkh: generatedKeys.pkh, type : "encrypted"};
     var identity = {
       pkh : keys.pkh,
       pk : keys.pk
@@ -85,11 +95,12 @@ app
     Storage.setStore(identity, keys);
     return $location.path("/validate");
   };
+
   $scope.newMnemonic();
 }])
 .controller('ValidateController', ['$scope', '$location', 'Storage', 'SweetAlert', 'Lang', function($scope, $location, Storage, Lang) {
   var ss = Storage.data;
-  if (Storage.data.ensk && typeof Storage.keys.sk != 'undefined'){
+  if (Storage.data.ensk && typeof Storage.keys.sk !== 'undefined'){
     return $location.path('/main');
   }  else if (Storage.data.ensk){
     return $location.path('/unlock');
@@ -101,7 +112,8 @@ app
   $scope.cancel = function(){
     Storage.clearStore();
     return $location.path('/new');
-  };  
+  };
+
   $scope.validate = function(){
     var keys = window.eztz.crypto.generateKeys($scope.mnemonic, $scope.passphrase);
     if (keys.pkh != ss.pkh) {
@@ -113,15 +125,17 @@ app
 }])
 .controller('MainController', ['$scope', '$location', '$http', 'Storage', 'SweetAlert', 'Lang', function($scope, $location, $http, Storage, SweetAlert, Lang) {
   var identity = Storage.data;
-  if (!identity || !identity.ensk || typeof Storage.keys.sk == 'undefined'){
+  if (!identity || !identity.ensk || typeof Storage.keys.sk === 'undefined'){
      return $location.path('/new');
   }
+
   $scope.type = Storage.keys.type;
   var keys = {
     sk : Storage.keys.sk,
     pk : Storage.keys.pk,
     pkh : Storage.keys.pkh,
   };
+
   //if ($scope.type != "encrypted") keys.sk = false;
   var rfi = false;
   var bakerCt = false;
@@ -149,30 +163,32 @@ app
     stakers: 0,
     rolls: 0,
     excess: 0,
-    
+
     bakes: 0,
     misses: 0,
     steals: 0,
     endorsements: 0,
-    
+
     nextReward: 0,
     nextLevel: 0,
     nextBake: 0,
     nextEndorse: 0,
-    cycle : 0,
-    level : 0,
-    
-    current : [],
-    currentEds : [],
-    payouts : [],
-  }
-  
+    cycle: 0,
+    level: 0,
+
+    current: [],
+    currentEds: [],
+    payouts: []
+  };
+
   $scope.cycleToLevel = function(l){
     return window.CONSTANTS.cycle_length * l;
-  }
+  };
+
   $scope.formatPercent = function(p){
-    return (isNaN(p) ? "N/A" : (p*100).toFixed(1)+"%");
-  }
+    return (isNaN(p) ? "N/A" : (p * 100).toFixed(1) + "%");
+  };
+
   $scope.formatTez = function(n, c, d, t){
     n = window.eztz.utility.totez(n);
     var suf = "ꜩ";
@@ -183,23 +199,26 @@ app
       n /= 1000;
       suf = "K"+suf;
     }
+
     var c = isNaN(c = Math.abs(c)) ? 3 : c, 
-    d = d == undefined ? "." : d, 
-    t = t == undefined ? "," : t, 
+    d = d === undefined ? "." : d, 
+    t = t === undefined ? "," : t, 
     s = n < 0 ? "-" : "", 
     i = String(parseInt(n = Math.abs(Number(n) || 0).toFixed(c))), 
     j = (j = i.length) > 3 ? j % 3 : 0;
     return s + (j ? i.substr(0, j) + t : "") + i.substr(j).replace(/(\d{3})(?=\d)/g, "$1" + t) + (c ? d + Math.abs(n - i).toFixed(c).slice(2) : "")+" "+suf;
   };
-  $scope.bakeStatus = function(i){
-    if (i.baker_hash.tz != $scope.pkh) return "burnt";
+
+  $scope.bakeStatus = function(i) {
+    if (i.baker_hash.tz !== $scope.pkh) return "burnt";
     if (!i.baked) return "burnt";
     if (i.distance_level < 0) return "burnt";
     if (i.priority > 0) return "steal";
     return "baked";
-  }
+  };
+
   var ledgerSign = function(r){
-    if ($scope.type == 'encrypted') return;
+    if ($scope.type === 'encrypted') return;
     var cancelled = false;
     SweetAlert.swal({
       title: '',
@@ -213,7 +232,8 @@ app
         cancelled = true;
         registeredDelegate = false;
       }
-    });
+      });
+
     window.tezledger.sign(Storage.keys.sk, "03"+r.opbytes).then(function(rr){
       r.opOb.signature = window.eztz.utility.b58cencode(window.eztz.utility.hex2buf(rr.signature), window.eztz.prefix.edsig);
       return window.eztz.rpc.inject(r.opOb, r.opbytes + rr.signature).then(function(r){
@@ -226,11 +246,12 @@ app
       if (!cancelled)
         SweetAlert.swal(Lang.translate('uh_oh'), "There seems to be an error registering as a delegate - try again later", 'error');
     });
-  }
+  };
+
   $scope.refreshBaker = function(hide){
     if (!hide) window.showLoader();
-    var pkh = $scope.pkh;
-    var ps = [];
+    const pkh = $scope.pkh;
+
     eztz.rpc.getBalance(pkh).then(function(r){
         $scope.$apply(function(){
         $scope.baker.balance = r;
@@ -239,10 +260,12 @@ app
       $scope.$apply(function(){
         $scope.baker.balance = 0;
       });
-    });
+      });
+
+    // Get baker delegated info.
     eztz.rpc.call('/chains/main/blocks/head/context/delegates/'+pkh).then(function(r){
       if (r.deactivated) {
-        window.eztz.rpc.registerDelegate({pk : keys.pk, pkh : keys.pkh, sk : ($scope.type == 'encrypted' ? keys.sk : false)}, 10000).then(ledgerSign);
+        window.eztz.rpc.registerDelegate({pk : keys.pk, pkh : keys.pkh, sk : ($scope.type === 'encrypted' ? keys.sk : false)}, 10000).then(ledgerSign);
       } else {
         registeredDelegate = true;
       }
@@ -282,7 +305,7 @@ app
       }
     }).catch(function(e){
       if (!registeredDelegate){
-        window.eztz.rpc.registerDelegate({pk : keys.pk, pkh : keys.pkh, sk : ($scope.type == 'encrypted' ? keys.sk : false)}, 10000).then(function(r){
+        window.eztz.rpc.registerDelegate({pk : keys.pk, pkh : keys.pkh, sk : ($scope.type === 'encrypted' ? keys.sk : false)}, 10000).then(function(r){
           registeredDelegate = true;
           ledgerSign(r);
           $scope.isEmpty = false;
@@ -290,19 +313,21 @@ app
           function(e){
             //Show alert, low balance
             $scope.$apply(function(e){
-            if (Array.isArray(e) && e.length && typeof e[0].id != 'undefined' && e[0].id == 'proto.alpha.implicit.empty_implicit_contract') $scope.isEmpty = true;
+            if (Array.isArray(e) && e.length && typeof e[0].id !== 'undefined' && e[0].id === 'proto.alpha.implicit.empty_implicit_contract') $scope.isEmpty = true;
           });
         });
       }
     });
-    
+
+    // get chain header information
     eztz.rpc.call('/chains/main/blocks/head/header').then(function(r){
       $scope.$apply(function(){
         $scope.baker.cycle = Math.floor((r.level-2)/window.CONSTANTS.cycle_length);
         $scope.baker.level = r.level;
       });
     });
-    
+
+    // get list of upcoming baking rights
     eztz.rpc.call('/chains/main/blocks/head/helpers/baking_rights?delegate='+pkh+"&cycle="+$scope.baker.cycle).then(function(r){
       $scope.$apply(function(){
         if (r.length)
@@ -311,6 +336,8 @@ app
           $scope.baker.nextBake = "N/A";
       });
     });
+
+    // get list of upcoming endorsing rights
     eztz.rpc.call('/chains/main/blocks/head/helpers/endorsing_rights?delegate='+pkh+"&cycle="+$scope.baker.cycle).then(function(r){
       $scope.$apply(function(){
         if (r.length)
@@ -319,9 +346,10 @@ app
           $scope.baker.nextEndorse = "N/A";
       });
     });
-    
+
+    // get statistics for baker
     $http.get("https://api.tzstats.com/explorer/account/"+pkh).then(function(r){
-        if (r.status == 200){
+        if (r.status === 200){
           $scope.baker.bakes = r.data.blocks_baked;
           $scope.baker.endorsements = r.data.blocks_endorsed;
           $scope.baker.misses = r.data.blocks_missed;
@@ -352,57 +380,64 @@ app
 
     window.hideLoader();
   };
-  $scope.showPer = function(a,b){
-    return (b == 0 ? $scope.formatPercent(0) : $scope.formatPercent(a/b));
-  }
-  $scope.settings = function(){
+  $scope.showPer = function(a, b) {
+    return (b === 0 ? $scope.formatPercent(0) : $scope.formatPercent(a / b));
+  };
+
+  $scope.settings = function() {
     clearInterval(rfi);
     return $location.path('/setting');
-  }
-  $scope.lock = function(){
+  };
+
+  $scope.lock = function() {
     clearInterval(rfi);
     Storage.keys = {};
     $scope.stopBaker();
     return $location.path('/unlock');
-  }
+  };
+
   $scope.copy = function(){
     copyToClipboard($scope.pkh);
     alert("The address has been copied");
   };
-  $scope.startBaker = function(){
+
+  $scope.startBaker = function() {
     startBaking = true;
     $scope.status = 3;
     bakerCt = window.BCBaker.start(keys);
-  }
-  $scope.stopBaker = function(){
+  };
+
+  $scope.stopBaker = function() {
     $scope.status = 2;
-    if (bakerCt){
+    if (bakerCt) {
       clearInterval(bakerCt);
       bakerCt = false;
     }
     startBaking = false;
-  }
+  };
+
   copyToClipboard = function(text) {
     if (window.clipboardData && window.clipboardData.setData) {
-        return clipboardData.setData("Text", text); 
+      return clipboardData.setData("Text", text);
     } else if (document.queryCommandSupported && document.queryCommandSupported("copy")) {
-        var textarea = document.createElement("textarea");
-        textarea.textContent = text;
-        textarea.style.position = "fixed";
-        document.body.appendChild(textarea);
-        textarea.select();
-        try {
-            return document.execCommand("copy");
-        } catch (ex) {
-            return false;
-        } finally {
-            document.body.removeChild(textarea);
-        }
+      var textarea = document.createElement("textarea");
+      textarea.textContent = text;
+      textarea.style.position = "fixed";
+      document.body.appendChild(textarea);
+      textarea.select();
+      try {
+        return document.execCommand("copy");
+      } catch (ex) {
+        return false;
+      } finally {
+        document.body.removeChild(textarea);
+      }
     }
-  }
+  };
 
+  // Baker information is refreshed every 30 seconds.
   $scope.refreshBaker();
-  rfi = setInterval(function(){$scope.refreshBaker(true)}, 30000);
+  rfi = setInterval(function() { $scope.refreshBaker(true); }, 30000);
 }])
 .controller('SettingController', ['$scope', '$location', 'Storage', 'SweetAlert', 'Lang', function($scope, $location, Storage, SweetAlert, Lang) {
     $scope.setting = Storage.settings;
@@ -416,8 +451,8 @@ app
       window.eztz.node.setProvider($scope.setting.rpc);
       return $location.path('/main');
     }
-    
-    $scope.show = function(){
+
+    $scope.show = function() {
       if (!$scope.password) return alert("Please enter your password");
       if ($scope.password == Storage.password) {
         $scope.privateKey = Storage.keys.sk;
@@ -425,27 +460,28 @@ app
         alert("Incorrect password");
       }
       $scope.password = '';
-    }
+    };
 }])
 .controller('UnlockController', ['$scope', '$location', 'Storage', 'SweetAlert', 'Lang', function($scope, $location, Storage, SweetAlert, Lang) {
   var ss = Storage.data;
   $scope.password = '';
-  $scope.clear = function(){
+  $scope.clear = function() {
     SweetAlert.swal({
-      title: Lang.translate('are_you_sure'),
-      text: Lang.translate('clear_tezbox_warning'),
-      type : "warning",
-      showCancelButton: true,
-      confirmButtonText: Lang.translate('yes_clear_it'),
-      closeOnConfirm: true
-    },
-    function(isConfirm){
-      if (isConfirm){
-        Storage.clearStore();
-        return $location.path('/new');
-      }
-    });
-  }
+        title: Lang.translate('are_you_sure'),
+        text: Lang.translate('clear_tezbox_warning'),
+        type: "warning",
+        showCancelButton: true,
+        confirmButtonText: Lang.translate('yes_clear_it'),
+        closeOnConfirm: true
+      },
+      function(isConfirm) {
+        if (isConfirm) {
+          Storage.clearStore();
+          return $location.path('/new');
+        }
+      });
+  };
+
   $scope.unlock = function(){
     if (!$scope.password) return SweetAlert.swal(Lang.translate('uh_oh'), Lang.translate('please_enter_password'), 'error');
     window.showLoader();
@@ -454,7 +490,7 @@ app
         try {
           var sk = sjcl.decrypt(window.eztz.library.pbkdf2.pbkdf2Sync($scope.password, ss.pkh, 30000, 512, 'sha512').toString(), ss.ensk);
           var type = sk.substr(0,4);
-					if (type == "edsk") { 
+					if (type === "edsk") { 
 						var c = window.eztz.crypto.extractKeys(sk);			
 						c.type = "encrypted";		
           } else {
@@ -463,11 +499,11 @@ app
 							pkh : ss.pkh,
 							sk : sk.substr(4),
 						};
-						if (type == "ledg"){
+						if (type === "ledg"){
 							c.type = "ledger";
-						} else if (type == "trez"){
+						} else if (type === "trez"){
 							c.type = "trezor";
-						} else if (type == "offl"){
+						} else if (type === "offl"){
 							c.type = "offline";
 						} else {
 							//Legacy
@@ -480,6 +516,7 @@ app
           SweetAlert.swal(Lang.translate('uh_oh'), Lang.translate('incorrect_password'), 'error');
           return;
         }
+
         Storage.keys = c;
         Storage.password = $scope.password;
         return $location.path('/main');
@@ -489,7 +526,7 @@ app
 }])
 .controller('EncryptController', ['$scope', '$location', 'Storage', 'SweetAlert', 'Lang', function($scope, $location, Storage, SweetAlert, Lang) {
   var identity =  Storage.data;
-  if (typeof Storage.keys.sk == 'undefined') return $location.path('/new');
+  if (typeof Storage.keys.sk === 'undefined') return $location.path('/new');
   $scope.password = '';
   $scope.password2 = '';
   $scope.cancel = function(){
@@ -497,7 +534,8 @@ app
       Storage.clearStore();
       return $location.path('/new');
     }
-  }
+  };
+
   $scope.save = function(){
     if (!$scope.password || !$scope.password2) return SweetAlert.swal(Lang.translate('uh_oh'), Lang.translate('error_enter_password'), 'error');
     if ($scope.password.length < 8) return SweetAlert.swal(Lang.translate('uh_oh'), Lang.translate('error_password_short'), 'error');
@@ -517,8 +555,9 @@ app
         identity = {
             pkh : identity.pkh,
             pk : identity.pk,
-            ensk : sjcl.encrypt(window.eztz.library.pbkdf2.pbkdf2Sync($scope.password, identity.pkh, 30000, 512, 'sha512').toString(), (Storage.keys.type == "encrypted" ? Storage.keys.sk : Storage.keys.type.substr(0,4) + Storage.keys.sk)),
+            ensk : sjcl.encrypt(window.eztz.library.pbkdf2.pbkdf2Sync($scope.password, identity.pkh, 30000, 512, 'sha512').toString(), (Storage.keys.type === "encrypted" ? Storage.keys.sk : Storage.keys.type.substr(0,4) + Storage.keys.sk)),
         };
+
         Storage.setStore(identity);
         Storage.password = $scope.password;
         window.hideLoader();
@@ -537,13 +576,13 @@ app
   };
   $scope.link = function(){
 
-    if ($scope.type == 'ledger' && !$scope.data) return SweetAlert.swal(Lang.translate('uh_oh'), Lang.translate('error_path_ledger'), 'error');
-    if ($scope.type == 'trezor' && !$scope.data) return SweetAlert.swal(Lang.translate('uh_oh'), Lang.translate('error_path_trezor'), 'error');
-    if ($scope.type == 'offline' && !$scope.address) return SweetAlert.swal(Lang.translate('uh_oh'), Lang.translate('error_offline_address'), 'error');
+    if ($scope.type === 'ledger' && !$scope.data) return SweetAlert.swal(Lang.translate('uh_oh'), Lang.translate('error_path_ledger'), 'error');
+    if ($scope.type === 'trezor' && !$scope.data) return SweetAlert.swal(Lang.translate('uh_oh'), Lang.translate('error_path_trezor'), 'error');
+    if ($scope.type === 'offline' && !$scope.address) return SweetAlert.swal(Lang.translate('uh_oh'), Lang.translate('error_offline_address'), 'error');
         
     $scope.text = Lang.translate('linking');
     var cancelled = false;
-    if ($scope.type == 'ledger'){
+    if ($scope.type === 'ledger'){
       SweetAlert.swal({
         title: '',
         imageUrl: "skin/images/ledger-logo.svg",
@@ -558,7 +597,7 @@ app
       });
       window.showLoader();
       var pp = window.tezledger.authBakingAddress($scope.data).then(function(r){
-        return window.eztz.utility.b58cencode(window.eztz.utility.hex2buf(r.publicKey.substr(2)), window.eztz.prefix.edpk)
+        return window.eztz.utility.b58cencode(window.eztz.utility.hex2buf(r.publicKey.substr(2)), window.eztz.prefix.edpk);
       })
     }
     pp.then(function(pk){
@@ -599,53 +638,55 @@ app
       return $location.path('/new');
   };
   $scope.isEdesk = function(){
-    return ($scope.private_key.substring(0, 5) == "edesk");
+    return ($scope.private_key.substring(0, 5) === "edesk");
   };
-  var restoreEnd = function(keys){
-    var keys = {sk : keys.sk, pk : keys.pk, pkh : keys.pkh, type : "encrypted"};
+  var restoreEnd = function(keysObject) {
+    var keys = { sk: keysObject.sk, pk: keysObject.pk, pkh: keysObject.pkh, type: "encrypted" };
     var identity = {
-      pkh : keys.pkh,
-      pk : keys.pk
+      pkh: keys.pkh,
+      pk: keys.pk
     };
-    if ($scope.type == 'ico' && $scope.activation_code){
-      window.showLoader(); 
-      window.eztz.rpc.activate(keys.pkh, $scope.activation_code).then(function(){
-        $scope.$apply(function(){
-          window.hideLoader();    
-          Storage.setStore(identity, keys);          
+
+    if ($scope.type === 'ico' && $scope.activation_code) {
+      window.showLoader();
+      window.eztz.rpc.activate(keys.pkh, $scope.activation_code).then(function() {
+        $scope.$apply(function() {
+          window.hideLoader();
+          Storage.setStore(identity, keys);
           SweetAlert.swal(Lang.translate('awesome'), Lang.translate('activation_successful'), "success");
           Storage.ico = true;
           Storage.restored = true;
           return $location.path("/encrypt");
         });
-      }).catch(function(e){
-        $scope.$apply(function(){
-          window.hideLoader();    
+      }).catch(function(e) {
+        $scope.$apply(function() {
+          window.hideLoader();
           return SweetAlert.swal(Lang.translate('uh_oh'), Lang.translate('activation_unsuccessful'), 'error');
         });
       });
     } else {
-      Storage.setStore(identity, keys);   
+      Storage.setStore(identity, keys);
       Storage.restored = true;
       return $location.path("/encrypt");
     }
-  }
+  };
+
   $scope.restore = function(){
     if (['seed', 'ico'].indexOf($scope.type) >= 0 && !$scope.seed) return SweetAlert.swal(Lang.translate('uh_oh'), Lang.translate('error_please_enter_your_seed_words'), 'error');
     if (['seed', 'ico'].indexOf($scope.type) >= 0 && !window.eztz.library.bip39.validateMnemonic($scope.seed)) return SweetAlert.swal(Lang.translate('uh_oh'), Lang.translate('error_seed_words_not_valid'), 'error');
 
-    if ($scope.type == 'ico' && !$scope.ico_password) return SweetAlert.swal(Lang.translate('uh_oh'), Lang.translate('error_enter_passphrase'), 'error');
-    if ($scope.type == 'ico' && !$scope.email) return SweetAlert.swal(Lang.translate('uh_oh'), Lang.translate('error_enter_email'), 'error');
-    if ($scope.type == 'ico' && !$scope.address) return SweetAlert.swal(Lang.translate('uh_oh'), Lang.translate('error_enter_address'), 'error');
-    if ($scope.type == 'private' && !$scope.private_key) return SweetAlert.swal(Lang.translate('uh_oh'), Lang.translate('error_enter_private_key'), 'error');
-    if ($scope.type == 'private' && $scope.isEdesk() && !$scope.encryption_password) return SweetAlert.swal(Lang.translate('uh_oh'), Lang.translate('error_enter_encryption_password'), 'error');
+    if ($scope.type === 'ico' && !$scope.ico_password) return SweetAlert.swal(Lang.translate('uh_oh'), Lang.translate('error_enter_passphrase'), 'error');
+    if ($scope.type === 'ico' && !$scope.email) return SweetAlert.swal(Lang.translate('uh_oh'), Lang.translate('error_enter_email'), 'error');
+    if ($scope.type === 'ico' && !$scope.address) return SweetAlert.swal(Lang.translate('uh_oh'), Lang.translate('error_enter_address'), 'error');
+    if ($scope.type === 'private' && !$scope.private_key) return SweetAlert.swal(Lang.translate('uh_oh'), Lang.translate('error_enter_private_key'), 'error');
+    if ($scope.type === 'private' && $scope.isEdesk() && !$scope.encryption_password) return SweetAlert.swal(Lang.translate('uh_oh'), Lang.translate('error_enter_encryption_password'), 'error');
     $scope.text = Lang.translate('restoring');
-    if ($scope.type == 'seed'){
+    if ($scope.type === 'seed'){
       var keys = window.eztz.crypto.generateKeys($scope.seed, $scope.passphrase);          
-    } else if ($scope.type == 'ico'){
+    } else if ($scope.type === 'ico'){
       var keys = window.eztz.crypto.generateKeys($scope.seed, $scope.email + $scope.ico_password);       
-      if ($scope.address != keys.pkh) return SweetAlert.swal(Lang.translate('uh_oh'), Lang.translate('error_fundraiser_details_dont_mach'), 'error');
-    } else if ($scope.type == 'private'){
+      if ($scope.address !== keys.pkh) return SweetAlert.swal(Lang.translate('uh_oh'), Lang.translate('error_fundraiser_details_dont_mach'), 'error');
+    } else if ($scope.type === 'private'){
       if ($scope.isEdesk()){
         return window.eztz.crypto.extractEncryptedKeys($scope.private_key, $scope.encryption_password).then(function(k){
           $scope.$apply(function(){

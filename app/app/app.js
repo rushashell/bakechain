@@ -1,4 +1,5 @@
 "use strict";
+
 var app = angular.module('bakechain', [
   'ngRoute',
   'angular-blockies',
@@ -6,7 +7,8 @@ var app = angular.module('bakechain', [
 ])
 .run(function($rootScope, Lang) {
   $rootScope.translate = Lang.translate;
-})
+  });
+
 app.config(function($routeProvider, $compileProvider) {
   $compileProvider.imgSrcSanitizationWhitelist(/^\s*(https?|local|data|chrome-extension|moz-extension|file):/);
   $routeProvider
@@ -67,10 +69,10 @@ app.config(function($routeProvider, $compileProvider) {
     require: 'ngModel',
     link: function(scope, element, attrs, ngModel) {
       ngModel.$parsers.push(function(val) {
-        return val != null ? parseFloat(val, 10) : null;
+        return val !== null ? parseFloat(val, 10) : null;
       });
       ngModel.$formatters.push(function(val) {
-        return val != null ? '' + val : null;
+        return val !== null ? '' + val : null;
       });
     }
   };
