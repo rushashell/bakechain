@@ -145,7 +145,7 @@ app
   $scope.cycleLength = window.CONSTANTS.cycle_length;
   $scope.pkh = keys.pkh;
   $scope.pkhex = eztz.utility.b58cdecode(keys.pkh, eztz.prefix.tz1);
-  $scope.explorerAccountInfoUrl = window.EXPLORER_ACCOUNTINFO_URL.replace("{{PKH}}", keys.pkh);
+  $scope.explorerAccountInfoUrl = window.EXPLORER_ACCOUNTINFO_URL.replace("{PKH}", keys.pkh);
   $scope.explorerBlockInfoUrl = window.EXPLORER_ACCOUNTINFO_URL;
   $scope.status = 0;
   var authorisedDelegate = false;
@@ -176,8 +176,7 @@ app
     cycle: 0,
     level: 0,
 
-    current: [],
-    currentEds: [],
+    rights: [],
     payouts: []
   };
 
@@ -209,7 +208,9 @@ app
     return s + (j ? i.substr(0, j) + t : "") + i.substr(j).replace(/(\d{3})(?=\d)/g, "$1" + t) + (c ? d + Math.abs(n - i).toFixed(c).slice(2) : "")+" "+suf;
   };
 
+  // TODO: FIX
   $scope.bakeStatus = function(i) {
+    return "NA";
     if (i.baker_hash.tz !== $scope.pkh) return "burnt";
     if (!i.baked) return "burnt";
     if (i.distance_level < 0) return "burnt";
@@ -253,14 +254,14 @@ app
     const pkh = $scope.pkh;
 
     eztz.rpc.getBalance(pkh).then(function(r){
-        $scope.$apply(function(){
+      $scope.$apply(function(){
         $scope.baker.balance = r;
       });
     }).catch(function(e){
       $scope.$apply(function(){
         $scope.baker.balance = 0;
       });
-      });
+    });
 
     // Get baker delegated info.
     eztz.rpc.call('/chains/main/blocks/head/context/delegates/'+pkh).then(function(r){
@@ -284,14 +285,14 @@ app
       
       //Status
       if (stakingBalanceEnough && registeredDelegate && startBaking) {
-        $scope.status = 3;
+        $scope.status = 3; // baking
         if (!bakerCt) $scope.startBaker();
       } else if (stakingBalanceEnough && registeredDelegate){
-        $scope.status = 2;
+        $scope.status = 2; // ready
       } else if (registeredDelegate) {
-        $scope.status = 1;
+        $scope.status = 1; // low balance
       } else {
-        $scope.status = 0;
+        $scope.status = 0; // loading
       }
       
       $scope.baker.rolls = Math.floor($scope.baker.staking/window.CONSTANTS.baker_min_staking_balance);
@@ -313,9 +314,23 @@ app
           function(e){
             //Show alert, low balance
             $scope.$apply(function(e){
-            if (Array.isArray(e) && e.length && typeof e[0].id !== 'undefined' && e[0].id === 'proto.alpha.implicit.empty_implicit_contract') $scope.isEmpty = true;
-          });
-        });
+              if (typeof(e) === "string")
+              {
+                reason = JSON.parse(e);
+              }
+              else if (Array.isArray(e))
+              {
+                reason = e;
+              }
+              else 
+              {
+                return;
+              }
+
+              if (reason.length && typeof reason[0].id !== 'undefined' && reason[0].id.endsWith('.implicit.empty_implicit_contract')) $scope.isEmpty = true;
+            });
+          }
+        );
       }
     });
 
@@ -330,12 +345,16 @@ app
     // get list of upcoming baking rights
     eztz.rpc.call('/chains/main/blocks/head/helpers/baking_rights?delegate='+pkh+"&cycle="+$scope.baker.cycle).then(function(r){
       $scope.$apply(function(){
-        if (r.length)
+        if (r.length) 
           $scope.baker.nextBake = r[0].level + "/" + r[0].priority;
         else
           $scope.baker.nextBake = "N/A";
       });
-    });
+    }).catch(
+      function(e){
+        $scope.baker.nextBake = "N/A";
+      }
+    );
 
     // get list of upcoming endorsing rights
     eztz.rpc.call('/chains/main/blocks/head/helpers/endorsing_rights?delegate='+pkh+"&cycle="+$scope.baker.cycle).then(function(r){
@@ -345,7 +364,11 @@ app
         else
           $scope.baker.nextEndorse = "N/A";
       });
-    });
+    }).catch(
+      function(e){
+        $scope.baker.nextEndorse = "N/A";
+      }
+    );
 
     // get statistics for baker
     $http.get("https://api.tzstats.com/explorer/account/"+pkh).then(function(r){
@@ -355,22 +378,41 @@ app
           $scope.baker.misses = r.data.blocks_missed;
           $scope.baker.steals = r.data.blocks_stolen;
         }
-    });
+    }).catch(
+      function(e){
+          $scope.baker.bakes = "N/A";
+          $scope.baker.endorsements = "N/A";
+          $scope.baker.misses = "N/A";
+          $scope.baker.steals = "N/A";
+      }
+    );
 
+    // List of current bakes and delegates
+    $http.get(window.API_URL+"/tables/rights?cycle=head&columns=type,height,priority,time&limit=500&address="+pkh).then(function(r){
+      if (r.status == 200 && r.data.length){
+        try 
+        {
+          data = r.data;
+          if (!Array.isArray(data))
+          {
+            data = JSON.parse(r.data);
+          }
+          
+          var currentRights = [];
+          data.forEach(upcomingRight => {
+            var right = { "type": upcomingRight[0], "level" : upcomingRight[1], "priority" : upcomingRight[2], "time": upcomingRight[3] };
+            currentRights.push(right);
+          });
 
-    // List of current bakes 
+          $scope.baker.rights = currentRights;
+        }
+        catch(ex){
+          $scope.baker.rights = [];
+        }
+      }
+     });
+    
     /*
-    $http.get(window.API_URL+"/bakings/"+pkh).then(function(r){
-        if (r.status == 200 && r.data.length){
-          $scope.baker.current = r.data;
-        }
-    });
-
-    $http.get(window.API_URL+"/bakings_endorsement/"+pkh).then(function(r){
-        if (r.status == 200 && r.data.length){
-          $scope.baker.currentEds = r.data;
-        }
-    });
     $http.get(window.API_URL+"/rewards_split_cycles/"+pkh).then(function(r){
         if (r.status == 200 && r.data.length){
           $scope.baker.payouts = r.data.slice(5);

@@ -1,6 +1,6 @@
 var VERSION = '3.1.0',
-NODE_URL = 'https://teznode.letzbake.com',
-API_URL = 'https://api.tzstats.com/explorer/',
+NODE_URL = 'https://api.tezos.id',
+API_URL = 'https://api.tzstats.com/',
 EXPLORER_ACCOUNTINFO_URL = "https://tzstats.com/{PKH}",
 EXPLORER_BLOCKINFO_URL = "https://tzstats.com/{BLOCKHASH}",
 DEBUGMODE = true,

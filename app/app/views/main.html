@@ -85,22 +85,22 @@
         <!-- Tab panes -->
         <div class="tab-content main">
           <div role="tabpanel" class="tab-pane active text-center" id="bakes">
-            <strong ng-hide="baker.current.length">No bakes available - please start baking!</strong>
+            <strong ng-hide="baker.rights.length">No bakes available - please start baking!</strong>
             
-            <table ng-show="baker.current.length" class="tableList">
-              <thead><th>Level</th><th >Hash</th><th>Priority</th><th>Status</th><th></th></thead>
-              <tr class="tableListRow" ng-repeat="item in baker.current" ng-show="item.distance_level == 0 || priority == 0">
-                <td>{{item.level}}</td><td>{{item.block_hash.substr(0,20)}}...</td><td>{{item.priority}}</td><td style="text-transform:uppercase;" class="style-{{bakeStatus(item)}}">{{bakeStatus(item)}}</td><td><a target="_blank" href="{{explorerUrl}}{{item.block_hash}}" class="btn btn-small btn-primary">View Online</a></td>
+            <table ng-show="baker.rights.length" class="tableList">
+              <thead><th>Level</th><th>Priority</th><th>Status</th><th></th></thead>
+              <tr class="tableListRow" ng-repeat="item in baker.rights | filter: { type: 'baking' }" ng-show="priority == 0">
+                <td>{{item.level}}</td><td>{{item.priority}}</td><td style="text-transform:uppercase;" class="style-{{bakeStatus(item)}}">{{bakeStatus(item)}}</td><td><a target="_blank" href="#" class="btn btn-small btn-primary">View Online</a></td>
               </tr>
             </table>
           </div>
           <div role="tabpanel" class="tab-pane text-center" id="endorsements">
-            <strong ng-hide="baker.currentEds.length">No endorsements available - please start baking!</strong>
+            <strong ng-hide="baker.rights.length">No endorsements available - please start baking!</strong>
             
-            <table ng-show="baker.currentEds.length" class="tableList">
-              <thead><th>Level</th><th>Hash</th><th>Priority</th><th>Count</th><th></th></thead>
-              <tr class="tableListRow" ng-repeat="item in baker.currentEds" ng-hide="!item.block">
-                <td>{{item.level}}</td><td>{{item.block.substr(0,20)}}...</td><td>{{item.priority}}</td><td>{{item.slots.length}}</td><td><a target="_blank" href="{{explorerUrl}}{{item.block}}" class="btn btn-small btn-primary">View Online</a></td>
+            <table ng-show="baker.rights.length" class="tableList">
+              <thead><th>Level</th><th>Priority</th><th></th></thead>
+              <tr class="tableListRow" ng-repeat="item in baker.rights | filter: { type: 'endorsing' }" ng-hide="!item.level">
+                <td>{{item.level}}</td><td>{{item.priority}}</td><td><a target="_blank" href="#" class="btn btn-small btn-primary">View Online</a></td>
               </tr>
             </table>
           </div>
