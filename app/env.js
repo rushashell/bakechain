@@ -1,9 +1,9 @@
 var VERSION = '3.1.0',
 NODE_URL = 'https://api.tezos.id',
 API_URL = 'https://api.tzstats.com/',
-EXPLORER_ACCOUNTINFO_URL = "https://tzstats.com/{PKH}",
-EXPLORER_BLOCKINFO_URL = "https://tzstats.com/{BLOCKHASH}",
-DEBUGMODE = true,
+EXPLORER_ACCOUNTINFO_URL = "https://tezblock.com/account/{PKH}",
+EXPLORER_BLOCKINFO_URL = "https://tezblock.io/block/",
+DEBUGMODE = remote.getGlobal('debugMode'),
 BAKECHAIN_POWHEADER = '00bc0303',
 CONSTANTS = {
   mempool : 'mempool/pending_operations',

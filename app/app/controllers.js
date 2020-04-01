@@ -146,12 +146,13 @@ app
   $scope.pkh = keys.pkh;
   $scope.pkhex = eztz.utility.b58cdecode(keys.pkh, eztz.prefix.tz1);
   $scope.explorerAccountInfoUrl = window.EXPLORER_ACCOUNTINFO_URL.replace("{PKH}", keys.pkh);
-  $scope.explorerBlockInfoUrl = window.EXPLORER_ACCOUNTINFO_URL;
+  $scope.explorerBlockInfoUrl = window.EXPLORER_BLOCKINFO_URL;
   $scope.status = 0;
   var authorisedDelegate = false;
   var stakingBalanceEnough = false;
   var registeredDelegate = false;
   var startBaking = true;
+  var lastLevelStats = -1;
   $scope.statuses = ['loading...', 'low balance', 'ready', 'baking'];
   $scope.isEmpty = false;
   $scope.baker = {
@@ -176,7 +177,8 @@ app
     cycle: 0,
     level: 0,
 
-    rights: [],
+    bakingRights: [],
+    endorsingRights: [],
     payouts: []
   };
 
@@ -208,14 +210,30 @@ app
     return s + (j ? i.substr(0, j) + t : "") + i.substr(j).replace(/(\d{3})(?=\d)/g, "$1" + t) + (c ? d + Math.abs(n - i).toFixed(c).slice(2) : "")+" "+suf;
   };
 
-  // TODO: FIX
-  $scope.bakeStatus = function(i) {
-    return "NA";
-    if (i.baker_hash.tz !== $scope.pkh) return "burnt";
-    if (!i.baked) return "burnt";
-    if (i.distance_level < 0) return "burnt";
-    if (i.priority > 0) return "steal";
-    return "baked";
+  $scope.rightStatus = function(right) {
+    if (right.is_lost) return "burnt"; // baker
+    if (right.is_stolen) return "steal"; // baker
+    if (right.is_missed) return "missed"; // endorser
+    
+    if ($scope.baker.level < right.level) return "NA"; // future
+    if ($scope.baker.level > right.level && right.type === "baking") return "baked"; // past
+    if ($scope.baker.level > right.level && right.type === "endorsing") return "endorsed"; // past
+    if ($scope.baker.level === right.level && right.type === "baking") // now
+    {
+      if (right.priority === 0) 
+        return "baking";
+      else 
+        return "waiting";
+    }
+    if ($scope.baker.level === right.level && right.type === "endorsing") return "endorsing"; // now
+    return "";
+  };
+
+  $scope.rightsPastFuture = function(right)
+  {
+    if ($scope.baker.level === right.level) return "now";
+    if ($scope.baker.level < right.level) return "future";
+    return "past";
   };
 
   var ledgerSign = function(r){
@@ -249,25 +267,32 @@ app
     });
   };
 
-  $scope.refreshBaker = function(hide){
+  // This function will be repeated every 60 seconds.
+  $scope.refreshBaker = function(hide)
+  {
     if (!hide) window.showLoader();
     const pkh = $scope.pkh;
 
-    eztz.rpc.getBalance(pkh).then(function(r){
+    eztz.rpc.getBalance(pkh).then(function(r)
+    {
       $scope.$apply(function(){
         $scope.baker.balance = r;
       });
-    }).catch(function(e){
+    }).catch(function(e)
+    {
       $scope.$apply(function(){
         $scope.baker.balance = 0;
       });
     });
 
     // Get baker delegated info.
-    eztz.rpc.call('/chains/main/blocks/head/context/delegates/'+pkh).then(function(r){
-      if (r.deactivated) {
+    eztz.rpc.call('/chains/main/blocks/head/context/delegates/'+pkh).then(function(r)
+    {
+      if (r.deactivated) 
+      {
         window.eztz.rpc.registerDelegate({pk : keys.pk, pkh : keys.pkh, sk : ($scope.type === 'encrypted' ? keys.sk : false)}, 10000).then(ledgerSign);
-      } else {
+      } else 
+      {
         registeredDelegate = true;
       }
       
@@ -277,30 +302,42 @@ app
       $scope.baker.frozen = parseInt(r.frozen_balance) - (parseInt(r.balance) + parseInt(r.delegated_balance) - parseInt(r.staking_balance));
       $scope.baker.staking = parseInt(r.staking_balance);
       $scope.baker.stakers = parseInt(r.delegated_contracts.length);
-      if ($scope.baker.staking < window.CONSTANTS.baker_min_staking_balance) {
+      if ($scope.baker.staking < window.CONSTANTS.baker_min_staking_balance) 
+      {
         stakingBalanceEnough = false;
-      } else {
+      } 
+      else 
+      {
         stakingBalanceEnough = true;
       }
       
       //Status
-      if (stakingBalanceEnough && registeredDelegate && startBaking) {
+      if (stakingBalanceEnough && registeredDelegate && startBaking) 
+      {
         $scope.status = 3; // baking
         if (!bakerCt) $scope.startBaker();
-      } else if (stakingBalanceEnough && registeredDelegate){
+      } 
+      else if (stakingBalanceEnough && registeredDelegate)
+      {
         $scope.status = 2; // ready
-      } else if (registeredDelegate) {
+      } 
+      else if (registeredDelegate) 
+      {
         $scope.status = 1; // low balance
-      } else {
+      } 
+      else 
+      {
         $scope.status = 0; // loading
       }
       
       $scope.baker.rolls = Math.floor($scope.baker.staking/window.CONSTANTS.baker_min_staking_balance);
       $scope.baker.excess = $scope.baker.staking-($scope.baker.rolls*window.CONSTANTS.baker_min_staking_balance);
-      if (r.frozen_balance_by_cycle.length > 0){
+      if (r.frozen_balance_by_cycle.length > 0)
+      {
         $scope.baker.nextReward = r.frozen_balance_by_cycle[0].rewards;
         $scope.baker.nextLevel = ((r.frozen_balance_by_cycle[0].cycle + 6)*window.CONSTANTS.cycle_length);          
-      } else {
+      } else 
+      {
         $scope.baker.nextReward = 0;
         $scope.baker.nextLevel = "N/A";    
       }
@@ -338,90 +375,128 @@ app
     eztz.rpc.call('/chains/main/blocks/head/header').then(function(r){
       $scope.$apply(function(){
         $scope.baker.cycle = Math.floor((r.level-2)/window.CONSTANTS.cycle_length);
+        if (lastLevelStats === -1)
+        {
+          lastLevelStats = 0;
+        }
+
         $scope.baker.level = r.level;
       });
     });
 
-    // get list of upcoming baking rights
-    eztz.rpc.call('/chains/main/blocks/head/helpers/baking_rights?delegate='+pkh+"&cycle="+$scope.baker.cycle).then(function(r){
-      $scope.$apply(function(){
-        if (r.length) 
-          $scope.baker.nextBake = r[0].level + "/" + r[0].priority;
-        else
-          $scope.baker.nextBake = "N/A";
-      });
-    }).catch(
-      function(e){
-        $scope.baker.nextBake = "N/A";
-      }
-    );
-
-    // get list of upcoming endorsing rights
-    eztz.rpc.call('/chains/main/blocks/head/helpers/endorsing_rights?delegate='+pkh+"&cycle="+$scope.baker.cycle).then(function(r){
-      $scope.$apply(function(){
-        if (r.length)
-          $scope.baker.nextEndorse = r[0].level;
-        else
-          $scope.baker.nextEndorse = "N/A";
-      });
-    }).catch(
-      function(e){
-        $scope.baker.nextEndorse = "N/A";
-      }
-    );
-
-    // get statistics for baker
-    $http.get("https://api.tzstats.com/explorer/account/"+pkh).then(function(r){
-        if (r.status === 200){
-          $scope.baker.bakes = r.data.blocks_baked;
-          $scope.baker.endorsements = r.data.blocks_endorsed;
-          $scope.baker.misses = r.data.blocks_missed;
-          $scope.baker.steals = r.data.blocks_stolen;
-        }
-    }).catch(
-      function(e){
-          $scope.baker.bakes = "N/A";
-          $scope.baker.endorsements = "N/A";
-          $scope.baker.misses = "N/A";
-          $scope.baker.steals = "N/A";
-      }
-    );
-
-    // List of current bakes and delegates
-    $http.get(window.API_URL+"/tables/rights?cycle=head&columns=type,height,priority,time&limit=500&address="+pkh).then(function(r){
-      if (r.status == 200 && r.data.length){
-        try 
-        {
-          data = r.data;
-          if (!Array.isArray(data))
+    // List of current bakes and delegates, but only every 10 levels.
+    if (lastLevelStats === 0 || (lastLevelStats > 0 && (lastLevelStats + 10) <= $scope.baker.level))
+    {
+      // get statistics for baker
+      $http.get(window.API_URL+"/explorer/account/"+pkh).then(function(r)
+      {
+          if (r.status === 200)
           {
-            data = JSON.parse(r.data);
+            $scope.baker.bakes = r.data.blocks_baked;
+            $scope.baker.endorsements = r.data.blocks_endorsed;
+            $scope.baker.misses = r.data.blocks_missed;
+            $scope.baker.steals = r.data.blocks_stolen;
           }
-          
-          var currentRights = [];
-          data.forEach(upcomingRight => {
-            var right = { "type": upcomingRight[0], "level" : upcomingRight[1], "priority" : upcomingRight[2], "time": upcomingRight[3] };
-            currentRights.push(right);
-          });
+      }).catch(
+        function(e)
+        {
+            $scope.baker.bakes = "N/A";
+            $scope.baker.endorsements = "N/A";
+            $scope.baker.misses = "N/A";
+            $scope.baker.steals = "N/A";
+        }
+      );
 
-          $scope.baker.rights = currentRights;
+      $http.get(window.API_URL+"/tables/rights?cycle=head&columns=type,height,priority,time,is_lost,is_stolen,is_missed&limit=500&address="+pkh).then(function(r)
+      {
+        var currentBakingRights = [];
+        var currentEndorsingRights = [];
+        var foundFirstEndorse;
+        var foundFirstBake;
+
+        if (r.status == 200 && r.data.length)
+        {
+          try 
+          {
+            data = r.data;
+            if (!Array.isArray(data))
+            {
+              data = JSON.parse(r.data);
+            }           
+
+            data.forEach(upcomingRight => 
+            {
+              var right = { 
+                "type": upcomingRight[0], 
+                "level" : upcomingRight[1], 
+                "priority" : upcomingRight[2], 
+                "time": upcomingRight[3],
+                "is_lost": upcomingRight[4] === 1 ? true : false,
+                "is_stolen": upcomingRight[5] === 1 ? true : false,
+                "is_missed": upcomingRight[6] === 1 ? true : false
+              };
+
+              if (!foundFirstEndorse && right.type === "endorsing" && dateToTime(getDateNow()) <= (dateToTime(right.time)))
+              {
+                $scope.baker.nextEndorse = right.level + "/" + right.priority;
+                foundFirstEndorse = true;
+              }
+
+              if (!foundFirstBake && right.type === "baking" && dateToTime(getDateNow()) <= (dateToTime(right.time)))
+              {
+                $scope.baker.nextBake = right.level + "/" + right.priority;
+                foundFirstBake = true;
+              }
+
+              if (right.type === "baking") currentBakingRights.push(right);
+              if (right.type === "endorsing") currentEndorsingRights.push(right);
+            });
+
+            $scope.baker.bakingRights = currentBakingRights;
+            $scope.baker.endorsingRights = currentEndorsingRights;
+          }
+          catch(ex)
+          {
+            $scope.baker.bakingRights = [];
+            $scope.baker.endorsingRights = [];
+          }
         }
-        catch(ex){
-          $scope.baker.rights = [];
+
+        if (!foundFirstBake) $scope.baker.nextBake = "N/A";
+        if (!foundFirstEndorse) $scope.baker.nextEndorse = "N/A";
+      }).catch(
+        function(e)
+        {
+          $scope.baker.bakingRights = [];
+          $scope.baker.endorsingRights = [];
+          $scope.baker.nextBake = "N/A";
+          $scope.baker.nextEndorse = "N/A";
         }
-      }
-     });
+      );
     
-    /*
-    $http.get(window.API_URL+"/rewards_split_cycles/"+pkh).then(function(r){
-        if (r.status == 200 && r.data.length){
-          $scope.baker.payouts = r.data.slice(5);
-        }
-    });
-    */
+      /*
+      $http.get(window.API_URL+"/rewards_split_cycles/"+pkh).then(function(r){
+          if (r.status == 200 && r.data.length){
+            $scope.baker.payouts = r.data.slice(5);
+          }
+      });
+      */
+
+     lastLevelStats = $scope.baker.level;
+    }
+    else 
+    {
+      currentBakingRights = $scope.baker.bakingRights;
+      currentEndorsingRights = $scope.baker.endorsingRights;
+      $scope.baker.bakingRights = [];
+      $scope.baker.endorsingRights = [];
+      $scope.baker.bakingRights = currentBakingRights;
+      $scope.baker.endorsingRights = currentEndorsingRights;      
+    }
 
     window.hideLoader();
   };
+
   $scope.showPer = function(a, b) {
     return (b === 0 ? $scope.formatPercent(0) : $scope.formatPercent(a / b));
   };
@@ -431,30 +506,36 @@ app
     return $location.path('/setting');
   };
 
-  $scope.lock = function() {
+  $scope.lock = function()
+  {
     clearInterval(rfi);
     Storage.keys = {};
     $scope.stopBaker();
     return $location.path('/unlock');
   };
 
-  $scope.copy = function(){
+  $scope.copy = function()
+  {
     copyToClipboard($scope.pkh);
     alert("The address has been copied");
   };
 
-  $scope.startBaker = function() {
+  $scope.startBaker = function() 
+  {
     startBaking = true;
     $scope.status = 3;
     bakerCt = window.BCBaker.start(keys);
   };
 
-  $scope.stopBaker = function() {
+  $scope.stopBaker = function() 
+  {
     $scope.status = 2;
-    if (bakerCt) {
+    if (bakerCt) 
+    {
       clearInterval(bakerCt);
       bakerCt = false;
     }
+
     startBaking = false;
   };
 
@@ -477,9 +558,9 @@ app
     }
   };
 
-  // Baker information is refreshed every 30 seconds.
+  // Baker information is refreshed every 1 minute.
   $scope.refreshBaker();
-  rfi = setInterval(function() { $scope.refreshBaker(true); }, 30000);
+  rfi = setInterval(function() { $scope.refreshBaker(true); }, 60000);
 }])
 .controller('SettingController', ['$scope', '$location', 'Storage', 'SweetAlert', 'Lang', function($scope, $location, Storage, SweetAlert, Lang) {
     $scope.setting = Storage.settings;

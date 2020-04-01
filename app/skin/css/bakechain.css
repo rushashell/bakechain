@@ -10,7 +10,7 @@
 #loadingSpinnerContainer .bg{
   background-color:#000;
   opacity:.2;
-    position: absolute;
+  position: absolute;
   top: 0;
   bottom: 0;
   left: 0;
@@ -84,8 +84,8 @@ a:hover {
     background: #fff;
     border-radius: 0;
     -webkit-box-shadow: 0px 6px 10px -2px rgba(0,0,0,0.7);
--moz-box-shadow: 0px 6px 10px -2px rgba(0,0,0,0.7);
-box-shadow: 0px 6px 10px -2px rgba(0,0,0,0.7);
+    -moz-box-shadow: 0px 6px 10px -2px rgba(0,0,0,0.7);
+    box-shadow: 0px 6px 10px -2px rgba(0,0,0,0.7);
     height: 640px;
 }
 .avarea canvas{    
@@ -308,10 +308,10 @@ p.mnemonic a{
   text-align:right;
 }
 .tab-content.main table th{
-      text-transform: uppercase;
-    font-size: 15px;
-    color: #3E3E3E;
-    font-weight: bold;
+  text-transform: uppercase;
+  font-size: 15px;
+  color: #3E3E3E;
+  font-weight: bold;
 }
 .tab-content.main table td{
   text-align: left;
@@ -323,10 +323,30 @@ p.mnemonic a{
   width:90%;
 }
 .tab-content.main{
-      height: 300px;
-    overflow-y: scroll;
+  height: 300px;
+  overflow-y: scroll;
 }
+.rights-row-past {
+  color: #bbbbbb;
+  text-decoration: line-through;
+}
+.rights-row-now {
+  font-weight:bold;
+  color: rgb(70, 120, 255);
+}
+.rights-row-future {
+  color: #807979;
+}
+
+@keyframes blinker {  
+  80% { opacity: .4; }
+}
+
 .style-baked{
+  color: #F06EAA;
+  font-weight:bold;
+}
+.style-endorsed{
   color: #F06EAA;
   font-weight:bold;
 }
@@ -338,6 +358,26 @@ p.mnemonic a{
   font-weight:bold;
   color: red;
 }
+.style-missed{
+  font-weight:bold;
+  color: red;
+}
+.style-baking{
+  font-weight:bold;
+  color: #4faab3;
+  animation: blinker 1s linear infinite;
+}
+.style-waiting{
+  font-weight:bold;
+  color: #adbbbd;
+  animation: blinker 1s linear infinite;
+}
+.style-endorsing{
+  font-weight:bold;
+  color: #4faab3;
+  animation: blinker 1s linear infinite;
+}
+
 h4 {
   color: #B7B7B7;
   font-size: 1.5rem;

@@ -85,22 +85,30 @@
         <!-- Tab panes -->
         <div class="tab-content main">
           <div role="tabpanel" class="tab-pane active text-center" id="bakes">
-            <strong ng-hide="baker.rights.length">No bakes available - please start baking!</strong>
+            <strong ng-hide="baker.bakingRights.length">No bakes available - please start baking!</strong>
             
-            <table ng-show="baker.rights.length" class="tableList">
-              <thead><th>Level</th><th>Priority</th><th>Status</th><th></th></thead>
-              <tr class="tableListRow" ng-repeat="item in baker.rights | filter: { type: 'baking' }" ng-show="priority == 0">
-                <td>{{item.level}}</td><td>{{item.priority}}</td><td style="text-transform:uppercase;" class="style-{{bakeStatus(item)}}">{{bakeStatus(item)}}</td><td><a target="_blank" href="#" class="btn btn-small btn-primary">View Online</a></td>
+            <table ng-show="baker.bakingRights.length" class="tableList">
+              <thead><th>Level</th><th>Priority</th><th>Time</th><th>Status</th><th></th></thead>
+              <tr class="tableListRow" ng-repeat="item in baker.bakingRights" [ngClass]="{item.level===baker.level ? 'rights-row-now' : (item.level>baker.level ? 'rights-row-future' : 'rights-row-past')}">
+                <td>{{item.level}}</td>
+                <td>{{item.priority}}</td>
+                <td>{{item.time | date:'yyyy-MM-dd HH:mm:ss'}}</td>
+                <td style="text-transform:uppercase;" class="style-{{rightStatus(item)}}">{{rightStatus(item)}}</td>
+                <td><a target="_blank" href="{{explorerBlockInfoUrl}}{{item.level}}" class="btn btn-small btn-primary">View Online</a></td>
               </tr>
             </table>
           </div>
           <div role="tabpanel" class="tab-pane text-center" id="endorsements">
-            <strong ng-hide="baker.rights.length">No endorsements available - please start baking!</strong>
+            <strong ng-hide="baker.endorsingRights.length">No endorsements available - please start baking!</strong>
             
-            <table ng-show="baker.rights.length" class="tableList">
-              <thead><th>Level</th><th>Priority</th><th></th></thead>
-              <tr class="tableListRow" ng-repeat="item in baker.rights | filter: { type: 'endorsing' }" ng-hide="!item.level">
-                <td>{{item.level}}</td><td>{{item.priority}}</td><td><a target="_blank" href="#" class="btn btn-small btn-primary">View Online</a></td>
+            <table ng-show="baker.endorsingRights.length" class="tableList">
+              <thead><th>Level</th><th>Slot</th><th>Time</th><th>Status</th><th></th></thead>
+              <tr class="tableListRow" ng-repeat="item in baker.endorsingRights" ng-hide="!item.level"  [ngClass]="{item.level===baker.level ? 'rights-row-now' : (item.level>baker.level ? 'rights-row-future' : 'rights-row-past')}">
+                <td>{{item.level}}</td>
+                <td>{{item.priority}}</td>
+                <td>{{item.time | date:'yyyy-MM-dd HH:mm:ss'}}</td>
+                <td style="text-transform:uppercase;" class="style-{{rightStatus(item)}}">{{rightStatus(item)}}</td>
+                <td><a target="_blank" href="{{explorerBlockInfoUrl}}{{item.level}}" class="btn btn-small btn-primary">View Online</a></td>
               </tr>
             </table>
           </div>

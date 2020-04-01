@@ -11,6 +11,10 @@
     <link rel="stylesheet" href="skin/css/sweet-alert.css">
     <link rel="stylesheet" href="skin/css/bakechain.css">
     <title>BakeChain - Baker App</title>
+
+    <script>
+       var remote = require('electron').remote;
+    </script>
   </head>
   <body>
     <div class="background">
@@ -25,6 +29,8 @@
     </div>
     <script>if (typeof module === 'object') {window.module = module; module = undefined;}</script>
     <script src="skin/js/bakechain.js"></script>
+    <script src="skin/js/bakerutilities.js"></script>
+    <script src="skin/js/bakerfunctions.js"></script>
     <script src="skin/js/baker.js"></script>
     <script src="skin/js/eztz.min.js"></script>
     <script src="env.js"></script>

@@ -7,7 +7,9 @@ const url = require('url');
 const shell = require('electron').shell;
 const Menu = require('electron').Menu;
 
-let mainWindow
+global.debugMode = false;
+
+let mainWindow;
 function createWindow () {
   mainWindow = new BrowserWindow({
     show: false, 
@@ -20,13 +22,10 @@ function createWindow () {
     useContentSize: true, 
     icon : path.join(__dirname, 'assets/desktop-icon.png'),
     webPreferences: {
-      devTools: true,
+      devTools: global.debugMode,
       nodeIntegration: true
     }
   });
-
-  // Enable DEV tools for debugging.
-  //mainWindow.webContents.openDevTools();
 
   mainWindow.webContents.on('new-window', function(event, url){
     event.preventDefault();
@@ -94,15 +93,44 @@ function createMenu() {
     ]
   };
 
+  const developer = {
+    label: "Developer",
+    submenu: [
+      {
+        label: "Open DevTools",
+        accelerator: "CmdOrCtrl+D",
+        click: () => {
+          // Enable DEV tools for debugging.
+          mainWindow.webContents.openDevTools(true);
+        }
+      }
+    ]
+  }
+
   const template = [
     application,
     edit
   ];
 
-  Menu.setApplicationMenu(Menu.buildFromTemplate(template));
+  const template_dev = [
+    application,
+    edit,
+    developer
+  ]
+
+  if (!global.debugMode)
+  {
+    Menu.setApplicationMenu(Menu.buildFromTemplate(template));
+  }
+  else
+  {
+    Menu.setApplicationMenu(Menu.buildFromTemplate(template_dev));
+  }
 }
 
 app.on('ready',function(){
+  global.debugMode = process.argv.indexOf('--devmode')!= -1 ? true: false;
+  
   createWindow();
   createMenu();
 });
