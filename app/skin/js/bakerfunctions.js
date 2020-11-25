@@ -1,3 +1,12 @@
+if (typeof logOutput !== "function")
+{
+  var logOutput = function(e)
+  {    
+    if (typeof window.DEBUGMODE !== 'undefined' && window.DEBUGMODE)
+      console.log(e);
+  };
+}
+
 /*
   BAKER FUNCTIONS
 */
@@ -101,42 +110,55 @@ function endorse(keys, head, slots){
   {
     return f;
   })
-  .catch(function(e){logOutput(e)});
+  .catch(function(e){
+    console.log(e);
+  });
 }
 
-function bake(keys, head, priority, timestamp)
+function bake(keys, head, priority, timestamp, badOps)
 {
+  logOutput('Baking for level ' + (head.header.level) +'...');
+
   var operations = [[],[],[],[]],
   seed = '',
   seed_hex = '',
   nonce_hash = '',
   newLevel = head.header.level+1;
-    
-  if ((newLevel) % (window.CONSTANTS.commitment) === 0){
+  
+  logOutput('Checking for nonce for level ' + newLevel);
+  if ((newLevel) % (window.CONSTANTS.commitment) === 0)
+  {
     var seed = eztz.utility.hexNonce(64),
     seed_hash = eztz.library.sodium.crypto_generichash(32, eztz.utility.hex2buf(seed));
     nonce_hash = eztz.utility.b58cencode(seed_hash, eztz.prefix.nce);
     seed_hex = eztz.utility.buf2hex(seed_hash);
     logOutput("Nonce required for level " + newLevel);
   }
+  else
+  {
+    logOutput('No Nonce required for level ' + newLevel);
+  }
     
-  return eztz.node.query('/chains/'+head.chain_id+'/'+window.CONSTANTS.mempool).then(function(r)
+  logOutput('Requesting mempool pending operations...')
+  return eztz.node.query('/chains/'+head.chain_id+'/'+window.CONSTANTS.mempool)
+  .then(function(r)
   {
     var addedOps = [];
     for(var i = 0; i < r.applied.length; i++)
     {
-      if (addedOps.indexOf(r.applied[i].hash) <0) 
+      var appliedOperation = r.applied[i];
+      if (addedOps.indexOf(appliedOperation.hash) <0) 
       {
-        if (r.applied[i].branch !== head.hash) continue;
-        if (badOps.indexOf(r.applied[i].hash) >= 0) continue;
-        if (operationPass(r.applied[i]) === 3) continue;//todo fee filter
+        if (appliedOperation.branch !== head.hash) continue;
+        if (badOps.indexOf(appliedOperation.hash) >= 0) continue;
+        if (operationPass(appliedOperation) === 3) continue;//todo fee filter
 
-        addedOps.push(r.applied[i].hash);
-        operations[operationPass(r.applied[i])].push({
+        addedOps.push(appliedOperation.hash);
+        operations[operationPass(appliedOperation)].push({
           "protocol" : head.protocol,
-          "branch" : r.applied[i].branch,
-          "contents" : r.applied[i].contents,
-          "signature" : r.applied[i].signature
+          "branch" : appliedOperation.branch,
+          "contents" : appliedOperation.contents,
+          "signature" : appliedOperation.signature
         });
       }
     }
@@ -156,6 +178,7 @@ function bake(keys, head, priority, timestamp)
     /*
       Simulate the validation of a block that would contain the given operations and return the resulting fitness and context hash.
     */
+    logOutput('Calling preapply...')
     return eztz.node.query('/chains/'+head.chain_id+'/blocks/'+head.hash+'/helpers/preapply/block?sort=true&timestamp='+Math.max(dateToTime(getDateNow()), dateToTime(timestamp)), header)
     .then(function(r)
     {
@@ -197,6 +220,7 @@ function bake(keys, head, priority, timestamp)
       /*
         Forge a block header
       */
+      logOutput("Forging block header...");
       eztz.node.query('/chains/'+head.chain_id+'/blocks/'+head.hash+'/helpers/forge_block_header', shell_header).then(function(r)
       {
         var forged = r.block, signed, sopbytes;
@@ -231,7 +255,8 @@ function bake(keys, head, priority, timestamp)
         });
       });
     });
-  }).then(function(signResult){
+  }).then(function(signResult)
+  {
     return {
       timestamp : timestamp,
       data : signResult,
@@ -240,5 +265,11 @@ function bake(keys, head, priority, timestamp)
       level : newLevel,
       chain_id : head.chain_id
     };
+  })
+  .catch(function(e)
+  {
+    console.error("Requesting mempool operations failed", e);
+    logOutput("!Couldn't bake - requesting mempool information failed.");
+    return false;
   });
 }

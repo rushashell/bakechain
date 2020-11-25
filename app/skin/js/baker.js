@@ -41,6 +41,7 @@ function initBCBaker()
   {
     //Inject pending blocks (baking)
     var nb = [];
+    
     for(var i = 0; i < pendingBlocks.length; i++){
       var bb = pendingBlocks[i];
       if (bb.level <= head.header.level) continue; //prune
@@ -205,7 +206,7 @@ function initBCBaker()
                   bakedBlocks.push((bakerHeader));
                   logOutput("-Trying to bake "+firstRight.level+"/"+firstRight.priority+"... ("+firstRight.estimated_time+")");
 
-                  return bake(keys, h, firstRight.priority, firstRight.estimated_time).then(function(r)
+                  return bake(keys, h, firstRight.priority, firstRight.estimated_time, badOps).then(function(r)
                   {
                     // The baking (preapply) completed and the block is returned so it can be injected later.
                     pendingBlocks.push(r);
@@ -272,11 +273,14 @@ function initBCBaker()
   var bakingInterval = 1000;
 
   // Define global function for logging output.
-  var logOutput = function(e)
-  {    
-    if (typeof window.DEBUGMODE !== 'undefined' && window.DEBUGMODE)
-      console.log(e);
-  };
+  if (typeof logOutput !== "function")
+  {
+    var logOutput = function(e)
+    {    
+      if (typeof window.DEBUGMODE !== 'undefined' && window.DEBUGMODE)
+        console.log(e);
+    };
+  }
 
   var Store = require('electron-store');
   window.store2 = new Store();
